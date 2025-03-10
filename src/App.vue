@@ -1,7 +1,50 @@
 <script setup>
+import { onMounted, ref, watch, reactive } from 'vue'
+import axios from 'axios'
+
 import Header from './components/Header.vue'
 import CardList from './components/CardList.vue'
 import Drawer from './components/Drawer.vue'
+
+const items = ref([]) //
+
+// два состояния для запроса на бэк
+
+const filters = reactive({
+  sortBy: '',
+  searchQuery: '',
+})
+
+const onChangeSelect = (event) => {
+  filters.sortBy = event.target.value
+}
+
+onMounted(async () => {
+  // fetch('https://44279f13e2d739a9.mokky.dev/items')
+  //   .then((res) => res.json())
+  //   .then((data) => {
+  //     console.log(data)
+  //     items.value = data
+  //   })
+
+  try {
+    const { data } = await axios.get('https://44279f13e2d739a9.mokky.dev/items')
+    items.value = data
+  } catch (err) {
+    console.log(err)
+  }
+})
+
+watch(filters, async () => {
+  try {
+    const { data } = await axios.get(
+      'https://44279f13e2d739a9.mokky.dev/items?sortBy=' + filters.sortBy,
+    )
+    items.value = data
+  } catch (err) {
+    console.log(err)
+  }
+})
 </script>
 
 <template>
@@ -14,10 +57,10 @@ import Drawer from './components/Drawer.vue'
         <h2 class="text-3xl font-bold mb-8">Все Кроссовки</h2>
 
         <div class="flex gap-4">
-          <select class="py-2 px-3 outline-none border rounded-md">
-            <option>По названию</option>
-            <option>По цене(дешёвые)</option>
-            <option>По цене(дорогие)</option>
+          <select @change="onChangeSelect" class="py-2 px-3 outline-none border rounded-md">
+            <option value="name">По названию</option>
+            <option value="price">По цене(дешёвые)</option>
+            <option value="-price">По цене(дорогие)</option>
           </select>
 
           <div class="relative">
@@ -30,7 +73,9 @@ import Drawer from './components/Drawer.vue'
           </div>
         </div>
       </div>
-      <CardList />
+      <div class="mt-10">
+        <CardList :items="items" />
+      </div>
     </div>
   </div>
 </template>
