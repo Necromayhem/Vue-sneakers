@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, watch, reactive } from 'vue'
+import { onMounted, ref, watch, reactive, provide } from 'vue'
 import axios from 'axios'
 
 import Header from './components/Header.vue'
@@ -45,6 +45,10 @@ const fetchFavorites = async () => {
   }
 }
 
+const addToFavorite = async (item) => {
+  item.isFavorite = true
+}
+
 const fetchItems = async () => {
   try {
     const params = {
@@ -74,6 +78,8 @@ onMounted(async () => {
 })
 
 watch(filters, fetchItems)
+
+provide('addToFavorite', addToFavorite)
 </script>
 
 <template>
