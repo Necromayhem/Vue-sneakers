@@ -11,7 +11,7 @@ const items = ref([]) //
 // два состояния для запроса на бэк
 
 const filters = reactive({
-  sortBy: '',
+  sortBy: 'title',
   searchQuery: '',
 })
 
@@ -19,32 +19,61 @@ const onChangeSelect = (event) => {
   filters.sortBy = event.target.value
 }
 
+const onChangeSearchInput = (event) => {
+  filters.searchQuery = event.target.value
+}
+
+const fetchFavorites = async () => {
+  try {
+    const { data: favorites } = await axios.get('https://44279f13e2d739a9.mokky.dev/favorites')
+
+    items.value = items.value.map((item) => {
+      const favorite = favorites.find((favorite) => favorite.parentId === item.id)
+
+      if (!favorite) {
+        return item
+      }
+
+      return {
+        ...item,
+        isFavorite: true,
+        favoriteId: favorite.id,
+      }
+    })
+  } catch (err) {
+    console.log(err)
+  }
+}
+
+const fetchItems = async () => {
+  try {
+    const params = {
+      sortBy: filters.sortBy,
+    }
+
+    if (filters.searchQuery) {
+      params.title = `*${filters.searchQuery}*`
+    }
+
+    const { data } = await axios.get('https://44279f13e2d739a9.mokky.dev/items', {
+      params,
+    })
+    items.value = data.map((obj) => ({
+      ...obj,
+      isFavorite: false,
+      isAdded: false,
+    }))
+  } catch (err) {
+    console.log(err)
+  }
+}
+
 onMounted(async () => {
-  // fetch('https://44279f13e2d739a9.mokky.dev/items')
-  //   .then((res) => res.json())
-  //   .then((data) => {
-  //     console.log(data)
-  //     items.value = data
-  //   })
-
-  try {
-    const { data } = await axios.get('https://44279f13e2d739a9.mokky.dev/items')
-    items.value = data
-  } catch (err) {
-    console.log(err)
-  }
+  await fetchItems()
+  await fetchFavorites()
 })
 
-watch(filters, async () => {
-  try {
-    const { data } = await axios.get(
-      'https://44279f13e2d739a9.mokky.dev/items?sortBy=' + filters.sortBy,
-    )
-    items.value = data
-  } catch (err) {
-    console.log(err)
-  }
-})
+watch(filters, fetchItems)
 </script>
 
 <template>
@@ -66,6 +95,7 @@ watch(filters, async () => {
           <div class="relative">
             <img class="absolute left-4 top-3" src="/search.svg" alt="Search" />
             <input
+              @input="onChangeSearchInput"
               class="border rounded-md py-2 pl-11 pr-4 outline-none focus:border-gray-400"
               type="text"
               placeholder="Поиск..."
