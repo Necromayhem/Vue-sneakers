@@ -1,19 +1,68 @@
 <script setup>
-import { onMounted, ref, watch, reactive, provide } from 'vue'
+import { onMounted, ref, watch, reactive, provide, computed } from 'vue'
 import axios from 'axios'
 
 import Header from './components/Header.vue'
 import CardList from './components/CardList.vue'
 import Drawer from './components/Drawer.vue'
 
-const items = ref([]) //
+const items = ref([])
+const cart = ref([])
+const isCreatingOrder = ref(false)
 
-// два состояния для запроса на бэк
+const drawerOpen = ref(false)
+
+const totalPrice = computed(() => cart.value.reduce((acc, item) => acc + item.price, 0))
+
+const tax = computed(() => totalPrice.value * 0.05)
+
+const closeDrawer = () => {
+  drawerOpen.value = false
+}
+
+const openDrawer = () => {
+  drawerOpen.value = true
+}
 
 const filters = reactive({
   sortBy: 'title',
   searchQuery: '',
 })
+
+const addToCart = (item) => {
+  cart.value.push(item)
+  item.isAdded = true
+}
+
+const removeFromCart = (item) => {
+  cart.value.splice(cart.value.indexOf(item), 1)
+  item.isAdded = false
+}
+
+const createOrder = async () => {
+  try {
+    isCreatingOrder.value = true
+    const { data } = await axios.post('https://44279f13e2d739a9.mokky.dev/orders', {
+      items: cart.value,
+      totalPrice: totalPrice.value,
+    })
+
+    cart.value = []
+
+    return data
+  } catch (err) {
+    console.log(err)
+  }
+}
+
+const onClickAddPlus = (item) => {
+  if (!item.isAdded) {
+    addToCart(item)
+  } else {
+    removeFromCart(item)
+  }
+  console.log(cart)
+}
 
 const onChangeSelect = (event) => {
   filters.sortBy = event.target.value
@@ -51,16 +100,16 @@ const addToFavorite = async (item) => {
       const obj = {
         parentId: item.id,
       }
+      item.isFavorite = true
 
       const { data } = await axios.post(`https://44279f13e2d739a9.mokky.dev/favorites`, obj)
 
-      item.isFavorite = true
       item.favoriteId = data.id
 
       console.log(data)
     } else {
-      await axios.delete(`https://44279f13e2d739a9.mokky.dev/favorites/${item.favoriteId}`)
       item.isFavorite = false
+      await axios.delete(`https://44279f13e2d739a9.mokky.dev/favorites/${item.favoriteId}`)
       item.favoriteId = null
     }
   } catch (err) {
@@ -99,13 +148,22 @@ onMounted(async () => {
 
 watch(filters, fetchItems)
 
-provide('addToFavorite', addToFavorite)
+provide('cart', {
+  cart,
+  closeDrawer,
+  openDrawer,
+  addToCart,
+  removeFromCart,
+  totalPrice,
+  tax,
+})
 </script>
 
 <template>
-  <!-- <Drawer /> -->
+  <Drawer v-if="drawerOpen" @create-order="createOrder" />
+
   <div class="bg-white w-4/5 m-auto rounded-xl shadow-xl mt-14">
-    <Header />
+    <Header :total-price="totalPrice" @open-drawer="openDrawer" />
 
     <div class="p-10">
       <div class="flex justify-between items-center">
@@ -130,7 +188,7 @@ provide('addToFavorite', addToFavorite)
         </div>
       </div>
       <div class="mt-10">
-        <CardList :items="items" @addToFavorite="addToFavorite" />
+        <CardList :items="items" @add-to-favorite="addToFavorite" @add-to-cart="onClickAddPlus" />
       </div>
     </div>
   </div>
