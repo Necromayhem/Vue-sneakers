@@ -5,6 +5,7 @@ import axios from 'axios'
 import Header from './components/Header.vue'
 import CardList from './components/CardList.vue'
 import Drawer from './components/Drawer.vue'
+import CartItem from './components/CartItem.vue'
 
 const items = ref([])
 const cart = ref([])
@@ -15,6 +16,10 @@ const drawerOpen = ref(false)
 const totalPrice = computed(() => cart.value.reduce((acc, item) => acc + item.price, 0))
 
 const tax = computed(() => totalPrice.value * 0.05)
+
+const caryIsEmpty = computed(() => cart.value.length === 0)
+
+const CartButtonDisabled = computed(() => isCreatingOrder.value || caryIsEmpty.value)
 
 const closeDrawer = () => {
   drawerOpen.value = false
@@ -52,6 +57,8 @@ const createOrder = async () => {
     return data
   } catch (err) {
     console.log(err)
+  } finally {
+    isCreatingOrder.value = false
   }
 }
 
@@ -142,11 +149,34 @@ const fetchItems = async () => {
 }
 
 onMounted(async () => {
+  const localCart = localStorage.getItem('cart')
+  cart.value = localCart ? JSON.parse(localCart) : []
+
   await fetchItems()
   await fetchFavorites()
+
+  items.value = items.value.map((item) => ({
+    ...item,
+    isAdded: cart.value.some((cartItem) => cartItem.id === item.id),
+  }))
 })
 
 watch(filters, fetchItems)
+
+watch(cart, () => {
+  items.value = items.value.map((item) => ({
+    ...item,
+    isAdded: false,
+  }))
+})
+
+watch(
+  cart,
+  () => {
+    localStorage.setItem('cart', JSON.stringify(cart.value))
+  },
+  { deep: true },
+)
 
 provide('cart', {
   cart,
@@ -160,7 +190,7 @@ provide('cart', {
 </script>
 
 <template>
-  <Drawer v-if="drawerOpen" @create-order="createOrder" />
+  <Drawer v-if="drawerOpen" @create-order="createOrder" :button-disabled="CartButtonDisabled" />
 
   <div class="bg-white w-4/5 m-auto rounded-xl shadow-xl mt-14">
     <Header :total-price="totalPrice" @open-drawer="openDrawer" />

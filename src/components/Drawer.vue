@@ -1,7 +1,12 @@
 <script setup>
 import DrawerHead from './DrawerHead.vue'
 import CartItemList from './CartItemList.vue'
-import { inject } from 'vue'
+import { inject, computed } from 'vue'
+import InfoBlock from './InfoBlock.vue'
+
+defineProps({
+  buttonDisabled: Boolean,
+})
 
 const emit = defineEmits(['createOrder'])
 
@@ -13,28 +18,38 @@ const { totalPrice, tax } = inject('cart')
   <div class="bg-white w-96 h-full fixed right-0 top-0 z-20 p-8">
     <DrawerHead />
 
-    <CartItemList />
+    <div v-if="!totalPrice" class="flex h-full items-center">
+      <InfoBlock
+        title="Корзина пустая"
+        decription="Добавьте хотя бы одну пару кроссовок, чтобы сделать заказ."
+        image-url="/package-icon.png"
+      />
+    </div>
 
-    <div class="flex flex-col gap-4 mt-7">
-      <div class="flex gap-2">
-        <span>Итого:</span>
-        <div class="flex-1 border-b border-dashed"></div>
-        <b>{{ totalPrice }} ₽</b>
+    <div v-else>
+      <CartItemList />
+
+      <div class="flex flex-col gap-4 mt-7">
+        <div class="flex gap-2">
+          <span>Итого:</span>
+          <div class="flex-1 border-b border-dashed"></div>
+          <b>{{ totalPrice }} ₽</b>
+        </div>
+
+        <div class="flex gap-2">
+          <span>Налог 5%:</span>
+          <div class="flex-1 border-b border-dashed"></div>
+          <b>{{ tax }} ₽</b>
+        </div>
+
+        <button
+          @click="() => emit('createOrder')"
+          :disabled="buttonDisabled"
+          class="mt-4 bg-lime-500 w-full rounded-xl py-3 cursor-pointer text-white hover:bg-lime-600 transition active:bg-lime-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
+        >
+          Оформить заказ
+        </button>
       </div>
-
-      <div class="flex gap-2">
-        <span>Налог 5%:</span>
-        <div class="flex-1 border-b border-dashed"></div>
-        <b>{{ tax }} ₽</b>
-      </div>
-
-      <button
-        @click="() => emit('createOrder')"
-        :disabled="totalPrice ? false : true"
-        class="mt-4 bg-lime-500 w-full rounded-xl py-3 cursor-pointer text-white hover:bg-lime-600 transition active:bg-lime-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
-      >
-        Оформить заказ
-      </button>
     </div>
   </div>
 </template>
