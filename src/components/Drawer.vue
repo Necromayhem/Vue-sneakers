@@ -1,16 +1,42 @@
 <script setup>
+import axios from 'axios'
+import { ref, computed, inject } from 'vue'
+
 import DrawerHead from './DrawerHead.vue'
 import CartItemList from './CartItemList.vue'
-import { inject, computed } from 'vue'
 import InfoBlock from './InfoBlock.vue'
 
-defineProps({
-  buttonDisabled: Boolean,
+const props = defineProps({
+  totalPrice: Number,
+  vatPrice: Number,
 })
 
-const emit = defineEmits(['createOrder'])
+const { cart, closeDrawer } = inject('cart')
 
-const { totalPrice, tax } = inject('cart')
+const isCreating = ref(false)
+const orderId = ref(null)
+
+const createOrder = async () => {
+  try {
+    isCreating.value = true
+
+    const { data } = await axios.post(`https://44279f13e2d739a9.mokky.dev/orders`, {
+      items: cart.value,
+      totalPrice: props.totalPrice.value,
+    })
+
+    cart.value = []
+
+    orderId.value = data.id
+  } catch (err) {
+    console.log(err)
+  } finally {
+    isCreating.value = false
+  }
+}
+
+const cartIsEmpty = computed(() => cart.value.length === 0)
+const buttonDisabled = computed(() => isCreating.value || cartIsEmpty.value)
 </script>
 
 <template>
@@ -18,11 +44,18 @@ const { totalPrice, tax } = inject('cart')
   <div class="bg-white w-96 h-full fixed right-0 top-0 z-20 p-8">
     <DrawerHead />
 
-    <div v-if="!totalPrice" class="flex h-full items-center">
+    <div v-if="!totalPrice || orderId" class="flex h-full items-center">
       <InfoBlock
+        v-if="!totalPrice && !orderId"
         title="Корзина пустая"
-        decription="Добавьте хотя бы одну пару кроссовок, чтобы сделать заказ."
+        description="Добавьте хотя бы одну пару кроссовок, чтобы сделать заказ."
         image-url="/package-icon.png"
+      />
+      <InfoBlock
+        v-if="orderId"
+        title="Заказ оформлен!"
+        :description="`Ваш заказ #${orderId} скоро будет передан курьерской доставке`"
+        image-url="/order-success-icon.png"
       />
     </div>
 
@@ -39,13 +72,13 @@ const { totalPrice, tax } = inject('cart')
         <div class="flex gap-2">
           <span>Налог 5%:</span>
           <div class="flex-1 border-b border-dashed"></div>
-          <b>{{ tax }} ₽</b>
+          <b>{{ vatPrice }} ₽</b>
         </div>
 
         <button
-          @click="() => emit('createOrder')"
           :disabled="buttonDisabled"
-          class="mt-4 bg-lime-500 w-full rounded-xl py-3 cursor-pointer text-white hover:bg-lime-600 transition active:bg-lime-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
+          @click="createOrder"
+          class="mt-4 transition bg-lime-500 w-full rounded-xl py-3 text-white disabled:bg-slate-300 hover:bg-lime-600 active:bg-lime-700 cursor-pointer"
         >
           Оформить заказ
         </button>
