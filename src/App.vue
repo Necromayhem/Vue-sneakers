@@ -3,7 +3,7 @@ import { ref, watch, provide, computed } from 'vue'
 
 import Header from './components/Header.vue'
 import Drawer from './components/Drawer.vue'
-const test = null
+
 /* Корзина (START) */
 const cart = ref([])
 
