@@ -3,6 +3,8 @@ import CartItem from './CartItem.vue'
 import { inject } from 'vue'
 
 const { cart, removeFromCart } = inject('cart')
+
+const wtf = 'wtf'
 </script>
 
 <template>
